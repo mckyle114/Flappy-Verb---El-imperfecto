@@ -352,7 +352,7 @@ let state="ready",lastTime=performance.now();
 let groundOffset=0,cloudOffset=0;
 let quizAttempts=0,currentQuestion=null,lastQuestionIndex=-1,lastIrregularIndex=-1;
 let activePipe=null,currentQuizIsGold=false;
-let totalPassed=0,totalGenerated=0;
+let totalPassed=0,totalGenerated=0,normalGenerated=0;
 
 // Jackpot power-up state
 let jackpotActive=false,jackpotStartMs=0,jackpotGraceUntil=0;
@@ -654,7 +654,7 @@ function resetGame(){
   jackpotActive=false;jackpotStartMs=0;jackpotGraceUntil=0;jackpotCoins=[];
   jackpotNextTrailX=0;jackpotCountdownPulse=0;jackpotImpactFlash=0;
   pipes=[];state="ready";activePipe=null;currentQuestion=null;currentQuizIsGold=false;
-  totalPassed=0;totalGenerated=0;closeQuiz();stopMusic();musicStep=0;musicCurrentMs=235;
+  totalPassed=0;totalGenerated=0;normalGenerated=0;closeQuiz();stopMusic();musicStep=0;musicCurrentMs=235;
   if(audioCtx&&musicBus)musicBus.gain.value=.72;celebration.classList.remove("play");celebration.style.display="none";
   const firstX=680;
   for(let i=0;i<4;i++)addPipe(firstX+i*pipeSpacing,i===0?null:pipes[i-1]);
@@ -670,7 +670,13 @@ function addPipe(x,prev=null){
   const topH=Math.max(safeTop,Math.min(safeBottom,Math.round(target)));
   const gold=!jackpotActive&&shouldBeGold();
   totalGenerated++;
-  pipes.push({x,topH,passed:false,gold,announced:false,lastSparkle:0});
+  let isVerb=false;
+  if(!gold){
+    normalGenerated++;
+    isVerb=normalGenerated%3===0;
+  }
+  const question=gold?chooseQuestion(true):(isVerb?chooseQuestion(false):null);
+  pipes.push({x,topH,passed:false,gold,isVerb,question,announced:false,lastSparkle:0});
 }
 function flap(){
   ensureAudio();
@@ -694,7 +700,7 @@ function collisionWithPipe(p){
 }
 function openQuiz(pipe){
   state="quiz";activePipe=pipe;currentQuizIsGold=pipe.gold;
-  currentQuestion=chooseQuestion(pipe.gold);quizAttempts=0;
+  currentQuestion=pipe.question || chooseQuestion(pipe.gold);quizAttempts=0;
   quizCard.classList.toggle("gold",pipe.gold);
   document.getElementById("quizTitle").textContent=pipe.gold?"¡VERBO IRREGULAR!":"¡CONJUGA!";
   promptEl.textContent=currentQuestion.sentence;
@@ -840,8 +846,8 @@ function submitAnswer(){
       // Gold challenge unlocks the power-up. It does not award an automatic +10.
       sfxCorrect();
     }else{
-      feedbackEl.textContent="¡Correcto! +1";
-      score+=1;syncPhysicalDifficultyToScore();sfxCorrect();
+      feedbackEl.textContent="¡Correcto! +2";
+      score+=2;syncPhysicalDifficultyToScore();sfxCorrect();
     }
     if(score>best){best=score;localStorage.setItem(STORAGE.best,String(best))}
     if(!currentQuizIsGold)checkUnlocks();
@@ -920,9 +926,14 @@ function update(dt,now){
         // Bonus mode: every pipe is an automatic +1 and never interrupts play.
         score+=1;syncPhysicalDifficultyToScore();sfxPass();
         if(score>best){best=score;localStorage.setItem(STORAGE.best,String(best))}checkUnlocks()
-      }else{
-        // During the 2-second post-jackpot grace period, normal verb prompts resume.
+      }else if(p.gold||p.isVerb){
+        // Gold pipes always quiz. Every third non-gold pipe is a verb pipe.
         openQuiz(p);return;
+      }else{
+        // Ordinary pipes keep the flight flowing and are worth +1.
+        score+=1;syncPhysicalDifficultyToScore();sfxPass();
+        if(score>best){best=score;localStorage.setItem(STORAGE.best,String(best))}
+        checkUnlocks();
       }
     }
 
@@ -1011,6 +1022,29 @@ function drawGoldSparkles(p,gap){
     pxRect(c[0]-s/2,c[1],s,2,"#fff7ad");pxRect(c[0],c[1]-s/2,2,s,"#fff7ad");
   });
 }
+function drawVerbLabel(p,gap){
+  if(jackpotActive||!p.question)return;
+  const word=p.question.verb.toUpperCase();
+  const x=Math.round(p.x),labelW=pipeWidth-10,labelH=26;
+  const labelX=x+5,labelY=Math.max(8,p.topH-38-labelH-7);
+  ctx.save();
+  ctx.fillStyle=p.gold?"#fff0a0":"#ffffff";
+  ctx.strokeStyle="#151515";
+  ctx.lineWidth=4;
+  ctx.fillRect(labelX,labelY,labelW,labelH);
+  ctx.strokeRect(labelX,labelY,labelW,labelH);
+  let fontSize=15;
+  ctx.font=`900 ${fontSize}px Arial`;
+  while(ctx.measureText(word).width>labelW-8&&fontSize>10){
+    fontSize--;
+    ctx.font=`900 ${fontSize}px Arial`;
+  }
+  ctx.fillStyle="#151515";
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+  ctx.fillText(word,labelX+labelW/2,labelY+labelH/2+1);
+  ctx.restore();
+}
 function drawPipe(p){
   const gap=difficultyForScore(score).gap,x=Math.round(p.x),capH=38,bodyX=x+10,bodyW=pipeWidth-20;
   if(p.gold){
@@ -1021,6 +1055,7 @@ function drawPipe(p){
     drawNormalBody(bodyX,0,bodyW,p.topH-capH);drawNormalCap(x,p.topH-capH,pipeWidth,capH);
     const bottomY=p.topH+gap;drawNormalCap(x,bottomY,pipeWidth,capH);drawNormalBody(bodyX,bottomY+capH,bodyW,H-GROUND_H-(bottomY+capH));
   }
+  if(p.gold||p.isVerb)drawVerbLabel(p,gap);
 }
 function rainbowColor(offset=0){
   const hue=((performance.now()/7)+offset)%360;
