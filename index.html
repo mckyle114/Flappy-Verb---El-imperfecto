@@ -357,7 +357,8 @@ let totalPassed=0,totalGenerated=0,normalGenerated=0;
 // Jackpot power-up state
 let jackpotActive=false,jackpotStartMs=0,jackpotGraceUntil=0;
 let jackpotDurationMs=10000,jackpotGraceMs=2000;
-let jackpotCoins=[],jackpotCoinTarget=0,jackpotCoinsSpawned=0,jackpotNextTrailX=0;
+let jackpotCoins=[],jackpotCoinTarget=0,jackpotCoinsSpawned=0;
+let jackpotCoinWaveTimes=[],jackpotCoinWaveSizes=[],jackpotCoinWaveIndex=0;
 let jackpotCountdownPulse=0,jackpotImpactFlash=0;
 let lastJackpotWrapMs=0;
 
@@ -652,7 +653,8 @@ function hideMainMenu(){menuOverlay.style.display="none"}
 function resetGame(){
   bird.y=255;bird.vy=0;score=0;physicalScore=0;
   jackpotActive=false;jackpotStartMs=0;jackpotGraceUntil=0;jackpotCoins=[];
-  jackpotNextTrailX=0;jackpotCountdownPulse=0;jackpotImpactFlash=0;
+  jackpotCoinWaveTimes=[];jackpotCoinWaveSizes=[];jackpotCoinWaveIndex=0;
+  jackpotCountdownPulse=0;jackpotImpactFlash=0;
   pipes=[];state="ready";activePipe=null;currentQuestion=null;currentQuizIsGold=false;
   totalPassed=0;totalGenerated=0;normalGenerated=0;closeQuiz();stopMusic();musicStep=0;musicCurrentMs=235;
   if(audioCtx&&musicBus)musicBus.gain.value=.72;celebration.classList.remove("play");celebration.style.display="none";
@@ -751,11 +753,11 @@ function sfxCoin(value){
 function addCoin(x,y){
   jackpotCoins.push({x,y,value:1,r:12,collected:false,phase:Math.random()*Math.PI*2});
 }
-function spawnCoinTrail(){
+function spawnCoinTrail(requestedCount){
   if(jackpotCoinsSpawned>=jackpotCoinTarget)return;
   const playableTop=55,playableBottom=H-GROUND_H-45;
   const remaining=jackpotCoinTarget-jackpotCoinsSpawned;
-  const count=Math.min(remaining,3+Math.floor(Math.random()*3)); // 3-5 coins per trail
+  const count=Math.min(remaining,Math.max(1,requestedCount||2));
   const baseY=playableTop+70+Math.random()*(playableBottom-playableTop-140);
   const direction=Math.random()<.5?-1:1;
   const slope=(24+Math.random()*18)*direction;
@@ -764,9 +766,22 @@ function spawnCoinTrail(){
   for(let i=0;i<count;i++){
     const wave=Math.sin(i*.9)*14;
     const y=Math.max(playableTop,Math.min(playableBottom,baseY+slope*(i-(count-1)/2)/2+wave));
-    addCoin(W+75+i*spacing,y);
+    addCoin(W+55+i*spacing,y);
     jackpotCoinsSpawned++;
   }
+}
+function prepareJackpotCoinWaves(){
+  // Five evenly spaced waves keep coins present from the opening moment
+  // through the final countdown instead of front-loading the whole bonus.
+  jackpotCoinWaveTimes=[0,2000,4000,6000,8000];
+  const base=Math.floor(jackpotCoinTarget/jackpotCoinWaveTimes.length);
+  const extra=jackpotCoinTarget%jackpotCoinWaveTimes.length;
+  jackpotCoinWaveSizes=new Array(jackpotCoinWaveTimes.length).fill(base);
+
+  // Randomize which waves receive the extra coin while keeping every wave at 2-3 coins.
+  const order=[0,1,2,3,4].sort(()=>Math.random()-.5);
+  for(let i=0;i<extra;i++)jackpotCoinWaveSizes[order[i]]++;
+  jackpotCoinWaveIndex=0;
 }
 function startJackpot(){
   const now=performance.now();
@@ -774,9 +789,9 @@ function startJackpot(){
   jackpotCoins=[];
   jackpotCoinTarget=10+Math.floor(Math.random()*6); // exactly 10-15 coins total
   jackpotCoinsSpawned=0;
-  jackpotNextTrailX=0;
-  spawnCoinTrail();
-  jackpotNextTrailX=W+330;
+  prepareJackpotCoinWaves();
+  spawnCoinTrail(jackpotCoinWaveSizes[0]);
+  jackpotCoinWaveIndex=1;
   showJackpotCelebration();sfxJackpot();
   restoreMusic();
 }
@@ -808,11 +823,12 @@ function updateCoins(dt,now,speed){
   for(const c of jackpotCoins)c.x-=speed*f;
   jackpotCoins=jackpotCoins.filter(c=>!c.collected&&c.x>-60);
 
-  // Spread only 10-15 coins across the full bonus. Spawn a new short trail
-  // once the previous one is well into the screen.
-  const farthest=jackpotCoins.reduce((m,c)=>Math.max(m,c.x),-999);
-  if(jackpotCoinsSpawned<jackpotCoinTarget && farthest<W+70 && jackpotRemaining(now)>1500){
-    spawnCoinTrail();
+  // Time-based spawning keeps the 10-15 coins distributed across all 10 seconds.
+  // Waves arrive at roughly 0, 2, 4, 6, and 8 seconds.
+  const elapsed=jackpotElapsed(now);
+  while(jackpotCoinWaveIndex<jackpotCoinWaveTimes.length && elapsed>=jackpotCoinWaveTimes[jackpotCoinWaveIndex]){
+    spawnCoinTrail(jackpotCoinWaveSizes[jackpotCoinWaveIndex]);
+    jackpotCoinWaveIndex++;
   }
 
   // Moderate magnet: helpful for near-misses, but still requires following the trail.
