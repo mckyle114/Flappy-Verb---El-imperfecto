@@ -277,39 +277,39 @@ const questions=[
 const irregularQuestions=questions.filter(q=>q.irregular);
 const STORAGE={
   best:"flappyVerbBest_v5",
-  unlocks:"flappyVerbUnlocks_v5",
-  equipped:"flappyVerbEquipped_v5"
+  unlocks:"flappyVerbUnlocks_v9_200",
+  equipped:"flappyVerbEquipped_v9_200"
 };
 const cosmeticDefs=[
-  {id:"azul",score:5,category:"color",name:"Azul",preview:"●"},
-  {id:"verde",score:5,category:"color",name:"Verde",preview:"●"},
-  {id:"turquesa",score:5,category:"color",name:"Turquesa",preview:"●"},
-  {id:"celeste",score:5,category:"color",name:"Celeste",preview:"●"},
-  {id:"rojo",score:10,category:"color",name:"Rojo",preview:"●"},
-  {id:"naranja",score:10,category:"color",name:"Naranja",preview:"●"},
-  {id:"rosa",score:10,category:"color",name:"Rosa",preview:"●"},
-  {id:"coral",score:10,category:"color",name:"Coral",preview:"●"},
-  {id:"gorra",score:15,category:"sombrero",name:"Gorra",preview:"▰"},
-  {id:"gafas",score:20,category:"gafas",name:"Gafas de sol",preview:"▣"},
-  {id:"morado",score:25,category:"color",name:"Morado",preview:"●"},
-  {id:"negro",score:25,category:"color",name:"Negro",preview:"●"},
-  {id:"blanco",score:25,category:"color",name:"Blanco",preview:"●"},
-  {id:"dorado",score:25,category:"color",name:"Dorado",preview:"●"},
-  {id:"corona",score:30,category:"sombrero",name:"Corona",preview:"♛"},
-  {id:"alas",score:35,category:"alas",name:"Alas doradas",preview:"≋"},
-  {id:"estela",score:40,category:"estela",name:"Estela brillante",preview:"✦"},
-  {id:"estrella",score:45,category:"accesorio",name:"Estrella",preview:"★"},
-  {id:"aura",score:50,category:"efecto",name:"Aura arcoíris",preview:"◎"},
-  {id:"metalico",score:55,category:"color",name:"Plata metálica",preview:"●"},
-  {id:"visera",score:60,category:"gafas",name:"Visera neón",preview:"▰"},
-  {id:"helice",score:65,category:"sombrero",name:"Gorra con hélice",preview:"✣"},
-  {id:"alas_fuego",score:70,category:"alas",name:"Alas de fuego",preview:"≋"},
-  {id:"estela_estelar",score:75,category:"estela",name:"Estela estelar",preview:"✦"},
-  {id:"rayo",score:80,category:"accesorio",name:"Rayo",preview:"ϟ"},
-  {id:"holografico",score:85,category:"efecto",name:"Brillo holográfico",preview:"◎"},
-  {id:"obsidiana",score:90,category:"color",name:"Obsidiana",preview:"●"},
-  {id:"halo",score:95,category:"accesorio",name:"Halo",preview:"○"},
-  {id:"legendario",score:100,category:"efecto",name:"Efecto legendario",preview:"★"}
+  {id:"azul",score:10,category:"color",name:"Azul",preview:"●"},
+  {id:"verde",score:10,category:"color",name:"Verde",preview:"●"},
+  {id:"turquesa",score:10,category:"color",name:"Turquesa",preview:"●"},
+  {id:"celeste",score:10,category:"color",name:"Celeste",preview:"●"},
+  {id:"rojo",score:20,category:"color",name:"Rojo",preview:"●"},
+  {id:"naranja",score:20,category:"color",name:"Naranja",preview:"●"},
+  {id:"rosa",score:20,category:"color",name:"Rosa",preview:"●"},
+  {id:"coral",score:20,category:"color",name:"Coral",preview:"●"},
+  {id:"gorra",score:30,category:"sombrero",name:"Gorra",preview:"▰"},
+  {id:"gafas",score:40,category:"gafas",name:"Gafas de sol",preview:"▣"},
+  {id:"morado",score:50,category:"color",name:"Morado",preview:"●"},
+  {id:"negro",score:50,category:"color",name:"Negro",preview:"●"},
+  {id:"blanco",score:50,category:"color",name:"Blanco",preview:"●"},
+  {id:"dorado",score:50,category:"color",name:"Dorado",preview:"●"},
+  {id:"corona",score:60,category:"sombrero",name:"Corona",preview:"♛"},
+  {id:"alas",score:70,category:"alas",name:"Alas doradas",preview:"≋"},
+  {id:"estela",score:80,category:"estela",name:"Estela brillante",preview:"✦"},
+  {id:"estrella",score:90,category:"accesorio",name:"Estrella",preview:"★"},
+  {id:"aura",score:100,category:"efecto",name:"Aura arcoíris",preview:"◎"},
+  {id:"metalico",score:110,category:"color",name:"Plata metálica",preview:"●"},
+  {id:"visera",score:120,category:"gafas",name:"Visera neón",preview:"▰"},
+  {id:"helice",score:130,category:"sombrero",name:"Gorra con hélice",preview:"✣"},
+  {id:"alas_fuego",score:140,category:"alas",name:"Alas de fuego",preview:"≋"},
+  {id:"estela_estelar",score:150,category:"estela",name:"Estela estelar",preview:"✦"},
+  {id:"rayo",score:160,category:"accesorio",name:"Rayo",preview:"ϟ"},
+  {id:"holografico",score:170,category:"efecto",name:"Brillo holográfico",preview:"◎"},
+  {id:"obsidiana",score:180,category:"color",name:"Obsidiana",preview:"●"},
+  {id:"halo",score:190,category:"accesorio",name:"Halo",preview:"○"},
+  {id:"legendario",score:200,category:"efecto",name:"Efecto legendario",preview:"★"}
 ];
 const categoryLabels={
   color:"Color",sombrero:"Sombrero",gafas:"Gafas",alas:"Alas",
@@ -328,7 +328,12 @@ let equipped=Object.assign({
 // physicalScore drives flight difficulty and can lag behind jackpot score.
 // ------------------------------------------------------------
 function difficultyForScore(s){
-  const score=Math.max(0,s);
+  const rawScore=Math.max(0,s);
+  // Keep the established difficulty curve through 130. After that,
+  // difficulty rises only slightly and approaches a soft ceiling.
+  const score=rawScore<=130
+    ? rawScore
+    : 130+18*(1-Math.exp(-(rawScore-130)/55));
   const t=Math.min(score/100,1);
   const curve=t*t*(3-2*t);
   const over=Math.max(0,score-100);
@@ -361,6 +366,12 @@ let jackpotCoins=[],jackpotCoinTarget=0,jackpotCoinsSpawned=0;
 let jackpotCoinWaveTimes=[],jackpotCoinWaveSizes=[],jackpotCoinWaveIndex=0;
 let jackpotCountdownPulse=0,jackpotImpactFlash=0;
 let lastJackpotWrapMs=0;
+
+// Heart / life system
+const maxLives=3;
+let lives=maxLives,lifeGraceUntil=0;
+let heartPickups=[];
+let heartMessage="",heartMessageUntil=0;
 
 // ------------------------------------------------------------
 // AUDIO: separate buses allow music ducking during quizzes.
@@ -450,7 +461,12 @@ function sfxJackpot(){
     tone(f,t+.48+i*.055,.07,.035,"triangle");
   }
 }
-function targetMusicMs(){return 235/(1+0.014*Math.min(score,20))}
+function targetMusicMs(){
+  if(score<=20)return 235/(1+0.014*Math.max(0,score));
+  const at20=235/(1+0.014*20);
+  const t=Math.min((score-20)/180,1);
+  return at20-18*t;
+}
 function playMusicStep(){
   if(!musicEnabled||state==="ready"||state==="gameover")return;
   const ac=ensureAudio(),start=ac.currentTime+.025,sec=musicCurrentMs/1000;
@@ -532,13 +548,13 @@ function sfxUnlock(){
 }
 function rewardLabelForMilestone(points,items){
   const labels={
-    5:"Nueva paleta de colores",10:"Nueva paleta de colores",15:"Gorra",
-    20:"Gafas de sol",25:"Nueva paleta de colores",30:"Corona",
-    35:"Alas doradas",40:"Estela brillante",45:"Estrella",50:"Aura arcoíris",
-    55:"Color premium",60:"Gafas premium",65:"Sombrero premium",
-    70:"Alas premium",75:"Estela premium",80:"Accesorio premium",
-    85:"Efecto premium",90:"Color premium",95:"Accesorio premium",
-    100:"¡EFECTO LEGENDARIO!"
+    10:"Nueva paleta de colores",20:"Nueva paleta de colores",30:"Gorra",
+    40:"Gafas de sol",50:"Nueva paleta de colores",60:"Corona",
+    70:"Alas doradas",80:"Estela brillante",90:"Estrella",100:"Aura arcoíris",
+    110:"Color premium",120:"Gafas premium",130:"Sombrero premium",
+    140:"Alas premium",150:"Estela premium",160:"Accesorio premium",
+    170:"Efecto premium",180:"Color premium",190:"Accesorio premium",
+    200:"¡EFECTO LEGENDARIO!"
   };
   return labels[points] || (items.length===1?items[0].name:`${items.length} nuevos objetos`);
 }
@@ -652,6 +668,7 @@ function hideMainMenu(){menuOverlay.style.display="none"}
 // ------------------------------------------------------------
 function resetGame(){
   bird.y=255;bird.vy=0;score=0;physicalScore=0;
+  lives=maxLives;lifeGraceUntil=0;heartPickups=[];heartMessage="";heartMessageUntil=0;
   jackpotActive=false;jackpotStartMs=0;jackpotGraceUntil=0;jackpotCoins=[];
   jackpotCoinWaveTimes=[];jackpotCoinWaveSizes=[];jackpotCoinWaveIndex=0;
   jackpotCountdownPulse=0;jackpotImpactFlash=0;
@@ -678,7 +695,103 @@ function addPipe(x,prev=null){
     isVerb=normalGenerated%3===0;
   }
   const question=gold?chooseQuestion(true):(isVerb?chooseQuestion(false):null);
-  pipes.push({x,topH,passed:false,gold,isVerb,question,announced:false,lastSparkle:0});
+  const pipe={x,topH,passed:false,gold,isVerb,question,announced:false,lastSparkle:0};
+  pipes.push(pipe);
+  maybeSpawnHeart(prev,pipe);
+}
+function heartOverlapsPipeAt(x,y,r=17){
+  const box={x:x-r,y:y-r,w:r*2,h:r*2};
+  const gap=difficultyForScore(score).gap;
+  for(const p of pipes){
+    const top={x:p.x-10,y:0,w:pipeWidth+20,h:p.topH};
+    const bottomY=p.topH+gap;
+    const bottom={x:p.x-10,y:bottomY,w:pipeWidth+20,h:H-GROUND_H-bottomY};
+    if(rectsOverlap(box,top)||rectsOverlap(box,bottom))return true;
+  }
+  return false;
+}
+function maybeSpawnHeart(prev,newPipe){
+  // 2% chance per newly generated pipe, only when a heart can actually help.
+  if(jackpotActive||lives>=maxLives||heartPickups.length>0||!prev||Math.random()>=.02)return;
+
+  // Place the heart in the open horizontal lane BETWEEN two pipe columns.
+  // This keeps the pickup completely off the pipe bodies.
+  const left=prev.x+pipeWidth+34;
+  const right=newPipe.x-34;
+  if(right-left<70)return;
+
+  const x=left+(right-left)*(.35+Math.random()*.30);
+  const gap=difficultyForScore(score).gap;
+  const prevCenter=prev.topH+gap/2;
+  const newCenter=newPipe.topH+gap/2;
+  const center=(prevCenter+newCenter)/2;
+  let y=Math.max(70,Math.min(H-GROUND_H-55,center+(Math.random()-.5)*70));
+
+  for(let i=0;i<8&&heartOverlapsPipeAt(x,y);i++){
+    y=70+Math.random()*(H-GROUND_H-140);
+  }
+  if(heartOverlapsPipeAt(x,y))return;
+
+  heartPickups.push({x,y,r:16,collected:false,phase:Math.random()*Math.PI*2});
+}
+function sfxHeartPickup(){
+  if(!sfxEnabled)return;
+  const t=ensureAudio().currentTime;
+  tone(659.25,t,.07,.06,"triangle");
+  tone(880,t+.07,.08,.065,"triangle");
+  tone(1318.51,t+.15,.13,.07,"triangle");
+}
+function sfxHeartLost(){
+  if(!sfxEnabled)return;
+  const t=ensureAudio().currentTime;
+  tone(330,t,.09,.06,"square","sfx",250);
+  tone(220,t+.10,.16,.065,"square","sfx",150);
+}
+function showHeartMessage(text){
+  heartMessage=text;
+  heartMessageUntil=performance.now()+1250;
+}
+function safeRespawn(){
+  const gap=difficultyForScore(score).gap;
+  let targetY=(H-GROUND_H-bird.h)/2;
+  const candidates=pipes
+    .filter(p=>p.x+pipeWidth>bird.x+20)
+    .sort((a,b)=>a.x-b.x);
+  if(candidates.length){
+    const p=candidates[0];
+    targetY=p.topH+gap/2-bird.h/2;
+  }
+  bird.y=Math.max(18,Math.min(H-GROUND_H-bird.h-18,targetY));
+  bird.vy=0;
+  lifeGraceUntil=performance.now()+2000;
+}
+function loseHeart(){
+  if(lives<=0)return;
+  lives--;
+  sfxHeartLost();
+  if(lives<=0){
+    gameOver();
+    return;
+  }
+  safeRespawn();
+  showHeartMessage("♥ -1");
+  state="playing";
+  restoreMusic();
+  startMusic();
+}
+function updateHearts(dt,speed){
+  const f=Math.min(dt/16.6667,2);
+  const bx=bird.x+bird.w/2,by=bird.y+bird.h/2;
+  for(const h of heartPickups){
+    h.x-=speed*f;
+    if(Math.hypot(bx-h.x,by-h.y)<h.r+18){
+      h.collected=true;
+      lives=Math.min(maxLives,lives+1);
+      sfxHeartPickup();
+      showHeartMessage("♥ +1");
+    }
+  }
+  heartPickups=heartPickups.filter(h=>!h.collected&&h.x>-50);
 }
 function flap(){
   ensureAudio();
@@ -753,32 +866,55 @@ function sfxCoin(value){
 function addCoin(x,y){
   jackpotCoins.push({x,y,value:1,r:12,collected:false,phase:Math.random()*Math.PI*2});
 }
+function coinTrailOpenSlot(count,spacing){
+  const needed=(count-1)*spacing+34;
+  const sorted=[...pipes].sort((a,b)=>a.x-b.x);
+  const intervals=[];
+  for(let i=0;i<sorted.length-1;i++){
+    const left=sorted[i].x+pipeWidth+24;
+    const right=sorted[i+1].x-24;
+    if(right-left>=needed && right>W+20)intervals.push({left,right,a:sorted[i],b:sorted[i+1]});
+  }
+  if(!intervals.length)return null;
+  intervals.sort((a,b)=>Math.abs(a.left-(W+30))-Math.abs(b.left-(W+30)));
+  const slot=intervals[0];
+  const minX=slot.left+17;
+  const maxStart=slot.right-17-(count-1)*spacing;
+  if(maxStart<minX)return null;
+  const startX=minX+Math.random()*(maxStart-minX);
+  return {startX,a:slot.a,b:slot.b};
+}
 function spawnCoinTrail(requestedCount){
   if(jackpotCoinsSpawned>=jackpotCoinTarget)return;
-  const playableTop=55,playableBottom=H-GROUND_H-45;
   const remaining=jackpotCoinTarget-jackpotCoinsSpawned;
-  const count=Math.min(remaining,Math.max(1,requestedCount||2));
-  const baseY=playableTop+70+Math.random()*(playableBottom-playableTop-140);
-  const direction=Math.random()<.5?-1:1;
-  const slope=(24+Math.random()*18)*direction;
-  const spacing=64+Math.random()*12;
+  const count=Math.min(remaining,Math.max(1,requestedCount||3));
+  const spacing=50+Math.random()*8;
+  const slot=coinTrailOpenSlot(count,spacing);
+  if(!slot)return;
+
+  const gap=difficultyForScore(score).gap;
+  const centerA=slot.a.topH+gap/2;
+  const centerB=slot.b.topH+gap/2;
+  const baseY=Math.max(80,Math.min(H-GROUND_H-65,(centerA+centerB)/2));
+  const amplitude=18+Math.random()*12;
+  const phase=Math.random()*Math.PI*2;
 
   for(let i=0;i<count;i++){
-    const wave=Math.sin(i*.9)*14;
-    const y=Math.max(playableTop,Math.min(playableBottom,baseY+slope*(i-(count-1)/2)/2+wave));
-    addCoin(W+55+i*spacing,y);
+    const x=slot.startX+i*spacing;
+    const y=Math.max(65,Math.min(H-GROUND_H-48,baseY+Math.sin(phase+i*.9)*amplitude));
+    addCoin(x,y);
     jackpotCoinsSpawned++;
   }
 }
 function prepareJackpotCoinWaves(){
-  // Five evenly spaced waves keep coins present from the opening moment
-  // through the final countdown instead of front-loading the whole bonus.
+  // Five evenly spaced waves keep coins present from start to finish.
+  // Each wave now forms a slightly longer 3-4 coin path.
   jackpotCoinWaveTimes=[0,2000,4000,6000,8000];
   const base=Math.floor(jackpotCoinTarget/jackpotCoinWaveTimes.length);
   const extra=jackpotCoinTarget%jackpotCoinWaveTimes.length;
   jackpotCoinWaveSizes=new Array(jackpotCoinWaveTimes.length).fill(base);
 
-  // Randomize which waves receive the extra coin while keeping every wave at 2-3 coins.
+  // Randomize which waves receive the extra coin while keeping every wave at 3-4 coins.
   const order=[0,1,2,3,4].sort(()=>Math.random()-.5);
   for(let i=0;i<extra;i++)jackpotCoinWaveSizes[order[i]]++;
   jackpotCoinWaveIndex=0;
@@ -787,7 +923,7 @@ function startJackpot(){
   const now=performance.now();
   jackpotActive=true;jackpotStartMs=now;jackpotGraceUntil=0;
   jackpotCoins=[];
-  jackpotCoinTarget=10+Math.floor(Math.random()*6); // exactly 10-15 coins total
+  jackpotCoinTarget=15+Math.floor(Math.random()*6); // exactly 15-20 coins total
   jackpotCoinsSpawned=0;
   prepareJackpotCoinWaves();
   spawnCoinTrail(jackpotCoinWaveSizes[0]);
@@ -814,7 +950,7 @@ function endJackpot(now){
   syncPhysicalDifficultyToScore();
 }
 function isCollisionProtected(now){
-  return jackpotActive || now<jackpotGraceUntil;
+  return jackpotActive || now<jackpotGraceUntil || now<lifeGraceUntil;
 }
 function updateCoins(dt,now,speed){
   if(!jackpotActive)return;
@@ -823,7 +959,7 @@ function updateCoins(dt,now,speed){
   for(const c of jackpotCoins)c.x-=speed*f;
   jackpotCoins=jackpotCoins.filter(c=>!c.collected&&c.x>-60);
 
-  // Time-based spawning keeps the 10-15 coins distributed across all 10 seconds.
+  // Time-based spawning keeps the 15-20 coins distributed across all 10 seconds.
   // Waves arrive at roughly 0, 2, 4, 6, and 8 seconds.
   const elapsed=jackpotElapsed(now);
   while(jackpotCoinWaveIndex<jackpotCoinWaveTimes.length && elapsed>=jackpotCoinWaveTimes[jackpotCoinWaveIndex]){
@@ -878,11 +1014,12 @@ function submitAnswer(){
     if(quizAttempts>=2){
       feedbackEl.style.color="#b51f1f";
       feedbackEl.textContent=`Incorrecto. La respuesta era: ${currentQuestion.answer}`;
-      attemptsEl.textContent="Fin del juego";
+      attemptsEl.textContent=lives>1?"Pierdes 1 corazón":"Último corazón";
       setTimeout(()=>{
         closeQuiz();activePipe=null;currentQuestion=null;currentQuizIsGold=false;
-        state="gameover";stopMusic();sfxGameOver();
-        setTimeout(()=>{if(state==="gameover")showMainMenu()},900);
+        state="playing";
+        restoreMusic();startMusic();
+        loseHeart();
       },1100);
     }else{
       feedbackEl.style.color="#b51f1f";feedbackEl.textContent="Incorrecto. Inténtalo otra vez.";
@@ -957,7 +1094,7 @@ function update(dt,now){
       if(isCollisionProtected(now)){
         if(now-jackpotImpactFlash>120)jackpotImpactFlash=now;
       }else{
-        gameOver();return;
+        loseHeart();return;
       }
     }
   }
@@ -965,15 +1102,16 @@ function update(dt,now){
   // Ceiling/ground are lethal normally. During grace, pipe collision is protected
   // but screen wrapping has ended, so keep the bird safely inside the playfield.
   if(!jackpotActive){
-    if(now<jackpotGraceUntil){
+    if(now<jackpotGraceUntil||now<lifeGraceUntil){
       if(bird.y<0){bird.y=0;bird.vy=Math.max(0,bird.vy)}
       if(bird.y+bird.h>H-GROUND_H){bird.y=H-GROUND_H-bird.h;bird.vy=Math.min(0,bird.vy)}
     }else if(bird.y<-8||bird.y+bird.h>H-GROUND_H){
-      gameOver();return;
+      loseHeart();return;
     }
   }
 
   updateCoins(dt,now,speed);
+  updateHearts(dt,speed);
 
   if(pipes.length&&pipes[0].x+pipeWidth<-30){
     pipes.shift();
@@ -1103,6 +1241,54 @@ function drawJackpotCountdown(){
   ctx.strokeText(String(n),0,0);ctx.fillStyle="#ffe56a";ctx.fillText(String(n),0,0);
   ctx.restore();
 }
+function drawHeartShape(x,y,size,fill,stroke="#7b111b"){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.scale(size/32,size/32);
+  ctx.beginPath();
+  ctx.moveTo(16,29);
+  ctx.bezierCurveTo(12,24,2,18,2,10);
+  ctx.bezierCurveTo(2,3,11,0,16,7);
+  ctx.bezierCurveTo(21,0,30,3,30,10);
+  ctx.bezierCurveTo(30,18,20,24,16,29);
+  ctx.closePath();
+  ctx.fillStyle=fill;ctx.fill();
+  ctx.strokeStyle=stroke;ctx.lineWidth=3;ctx.stroke();
+  ctx.restore();
+}
+function drawHeartPickups(){
+  for(const h of heartPickups){
+    const pulse=1+.08*Math.sin(performance.now()/130+h.phase);
+    ctx.save();
+    ctx.shadowBlur=12;ctx.shadowColor="#ffccd1";
+    drawHeartShape(h.x,h.y,31*pulse,"#ef3f55");
+    ctx.restore();
+  }
+}
+function drawLives(){
+  const size=42;
+  const gap=16;
+  const totalW=maxLives*size+(maxLives-1)*gap;
+  const startX=(W-totalW)/2;
+  const y=H-GROUND_H+20;
+
+  for(let i=0;i<maxLives;i++){
+    if(i<lives)drawHeartShape(startX+i*(size+gap),y,size,"#ef3f55");
+    else drawHeartShape(startX+i*(size+gap),y,size,"#ffffff33","#8a8a8a");
+  }
+
+  if(heartMessage&&performance.now()<heartMessageUntil){
+    const alpha=Math.min(1,(heartMessageUntil-performance.now())/250);
+    ctx.save();ctx.globalAlpha=alpha;
+    ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.font='900 24px "Courier New",monospace';
+    ctx.lineWidth=5;ctx.strokeStyle="#222";
+    ctx.strokeText(heartMessage,W/2,H-GROUND_H+10);
+    ctx.fillStyle=heartMessage.includes("+")?"#ff6676":"#fff";
+    ctx.fillText(heartMessage,W/2,H-GROUND_H+10);
+    ctx.restore();
+  }
+}
 function drawGround(){
   const y=H-GROUND_H;pxRect(0,y,W,GROUND_H,"#ded895");pxRect(0,y,W,14,"#6aba43");pxRect(0,y+14,W,8,"#8bd45a");
   for(let x=-48;x<W+48;x+=48){const xx=x-groundOffset;pxRect(xx,y+26,28,8,"#c5bd72");pxRect(xx+22,y+42,28,8,"#eee8ac");pxRect(xx+8,y+63,22,7,"#c5bd72")}
@@ -1154,7 +1340,7 @@ function drawTrail(x,y){
 }
 function drawBird(){
   const x=Math.round(bird.x),y=Math.round(bird.y),tilt=state==="playing"?Math.max(-.35,Math.min(.65,bird.vy/12)):0;
-  const now=performance.now(),powered=jackpotActive,grace=!powered&&now<jackpotGraceUntil;
+  const now=performance.now(),powered=jackpotActive,grace=!powered&&(now<jackpotGraceUntil||now<lifeGraceUntil);
   const premium=equipped.efecto==="aura"||equipped.efecto==="holografico"||equipped.efecto==="legendario";
   const scale=powered?1.22:1;
 
@@ -1246,7 +1432,7 @@ function drawScore(){
   ctx.strokeText(`MEJOR: ${best}`,18,30);ctx.fillStyle="#fff";ctx.fillText(`MEJOR: ${best}`,18,30);
 
   if(state==="playing"||state==="quiz"){
-    const pct=100+Math.round(Math.min(score,100)*0.9);
+    const pct=Math.round(235/targetMusicMs()*100);
     ctx.font='bold 13px "Courier New",monospace';ctx.lineWidth=3;ctx.strokeStyle="#222";
     ctx.strokeText(`RITMO ${pct}%`,18,52);ctx.fillStyle="#fff";ctx.fillText(`RITMO ${pct}%`,18,52);
   }
@@ -1261,7 +1447,7 @@ function panel(title,lines,footer){
   ctx.fillStyle="#555";ctx.font='bold 16px "Courier New",monospace';ctx.fillText(footer,W/2,y+boxH-20);
 }
 function draw(){
-  drawSky();for(const p of pipes)drawPipe(p);drawCoins();drawGround();drawBird();drawScore();drawJackpotCountdown();
+  drawSky();for(const p of pipes)drawPipe(p);drawCoins();drawHeartPickups();drawGround();drawBird();drawScore();drawLives();drawJackpotCountdown();
   if(state==="ready")panel("FLAPPY VERB",["IMPERFECTO","Vuela. Pasa. Conjuga."],"ESPACIO / CLIC para empezar");
   if(state==="gameover")panel("FIN DEL JUEGO",[`PUNTUACIÓN: ${score}`,`MEJOR: ${best}`],"Elige JUGAR o PERSONALIZAR AVE");
 }
