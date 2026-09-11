@@ -278,8 +278,30 @@ const irregularQuestions=questions.filter(q=>q.irregular);
 const STORAGE={
   best:"flappyVerbBest_v5",
   unlocks:"flappyVerbUnlocks_v9_200",
-  equipped:"flappyVerbEquipped_v9_200"
+  equipped:"flappyVerbEquipped_v9_200",
+  bundle:"flappyVerbSave_v10"
 };
+function storageAvailable(){
+  try{
+    const k="__flappyVerbStorageTest__";
+    localStorage.setItem(k,"1");
+    localStorage.removeItem(k);
+    return true;
+  }catch(e){return false}
+}
+const storageOkay=storageAvailable();
+function safeGet(key){
+  if(!storageOkay)return null;
+  try{return localStorage.getItem(key)}catch(e){return null}
+}
+function safeSet(key,value){
+  if(!storageOkay)return false;
+  try{localStorage.setItem(key,value);return true}catch(e){return false}
+}
+function safeJSON(raw,fallback){
+  try{return raw?JSON.parse(raw):fallback}catch(e){return fallback}
+}
+const savedBundle=safeJSON(safeGet(STORAGE.bundle),{});
 const cosmeticDefs=[
   {id:"azul",score:10,category:"color",name:"Azul",preview:"●"},
   {id:"verde",score:10,category:"color",name:"Verde",preview:"●"},
@@ -315,11 +337,13 @@ const categoryLabels={
   color:"Color",sombrero:"Sombrero",gafas:"Gafas",alas:"Alas",
   estela:"Estela",accesorio:"Accesorio",efecto:"Efecto"
 };
-let unlocked=new Set(JSON.parse(localStorage.getItem(STORAGE.unlocks)||"[]"));
+const legacyUnlocks=safeJSON(safeGet(STORAGE.unlocks),[]);
+const bundleUnlocks=Array.isArray(savedBundle.unlocks)?savedBundle.unlocks:[];
+let unlocked=new Set([...legacyUnlocks,...bundleUnlocks]);
 let equipped=Object.assign({
   color:"amarillo",sombrero:"ninguno",gafas:"ninguno",alas:"normales",
   estela:"ninguna",accesorio:"ninguno",efecto:"ninguno"
-},JSON.parse(localStorage.getItem(STORAGE.equipped)||"{}"));
+},safeJSON(safeGet(STORAGE.equipped),{}),savedBundle.equipped||{});
 
 
 // ------------------------------------------------------------
@@ -352,7 +376,7 @@ function difficultyForScore(s){
 const bird={x:220,y:260,w:38,h:28,vy:0};
 const pipeWidth=88,pipeSpacing=355;
 let pipes=[],score=0,physicalScore=0;
-let best=Number(localStorage.getItem(STORAGE.best)||0);
+let best=Math.max(Number(safeGet(STORAGE.best)||0),Number(savedBundle.best||0));
 let state="ready",lastTime=performance.now();
 let groundOffset=0,cloudOffset=0;
 let quizAttempts=0,currentQuestion=null,lastQuestionIndex=-1,lastIrregularIndex=-1;
@@ -534,11 +558,25 @@ function chooseQuestion(gold=false){
 }
 
 
+function saveBundle(){
+  safeSet(STORAGE.bundle,JSON.stringify({
+    best,
+    unlocks:[...unlocked],
+    equipped,
+    savedAt:Date.now()
+  }));
+}
+function saveBest(){
+  safeSet(STORAGE.best,String(best));
+  saveBundle();
+}
 function saveUnlocks(){
-  localStorage.setItem(STORAGE.unlocks,JSON.stringify([...unlocked]));
+  safeSet(STORAGE.unlocks,JSON.stringify([...unlocked]));
+  saveBundle();
 }
 function saveEquipped(){
-  localStorage.setItem(STORAGE.equipped,JSON.stringify(equipped));
+  safeSet(STORAGE.equipped,JSON.stringify(equipped));
+  saveBundle();
 }
 function sfxUnlock(){
   if(!sfxEnabled)return;
@@ -909,7 +947,8 @@ function spawnCoinTrail(requestedCount){
 function prepareJackpotCoinWaves(){
   // Five evenly spaced waves keep coins present from start to finish.
   // Each wave now forms a slightly longer 3-4 coin path.
-  jackpotCoinWaveTimes=[0,2000,4000,6000,8000];
+  // Spawn the final wave early enough to physically reach the bird before the 10-second timer ends.
+  jackpotCoinWaveTimes=[0,1500,3000,4500,6000];
   const base=Math.floor(jackpotCoinTarget/jackpotCoinWaveTimes.length);
   const extra=jackpotCoinTarget%jackpotCoinWaveTimes.length;
   jackpotCoinWaveSizes=new Array(jackpotCoinWaveTimes.length).fill(base);
@@ -960,7 +999,7 @@ function updateCoins(dt,now,speed){
   jackpotCoins=jackpotCoins.filter(c=>!c.collected&&c.x>-60);
 
   // Time-based spawning keeps the 15-20 coins distributed across all 10 seconds.
-  // Waves arrive at roughly 0, 2, 4, 6, and 8 seconds.
+  // Waves arrive at roughly 0, 1.5, 3, 4.5, and 6 seconds so the last coins remain collectible.
   const elapsed=jackpotElapsed(now);
   while(jackpotCoinWaveIndex<jackpotCoinWaveTimes.length && elapsed>=jackpotCoinWaveTimes[jackpotCoinWaveIndex]){
     spawnCoinTrail(jackpotCoinWaveSizes[jackpotCoinWaveIndex]);
@@ -981,7 +1020,7 @@ function updateCoins(dt,now,speed){
       score+=1;
       syncPhysicalDifficultyToScore();
       sfxCoin(1);
-      if(score>best){best=score;localStorage.setItem(STORAGE.best,String(best))}
+      if(score>best){best=score;saveBest()}
       checkUnlocks();
     }
   }
@@ -1001,7 +1040,7 @@ function submitAnswer(){
       feedbackEl.textContent="¡Correcto! +2";
       score+=2;syncPhysicalDifficultyToScore();sfxCorrect();
     }
-    if(score>best){best=score;localStorage.setItem(STORAGE.best,String(best))}
+    if(score>best){best=score;saveBest()}
     if(!currentQuizIsGold)checkUnlocks();
     const wonGold=currentQuizIsGold;
     setTimeout(()=>{
@@ -1078,14 +1117,14 @@ function update(dt,now){
       if(jackpotActive){
         // Bonus mode: every pipe is an automatic +1 and never interrupts play.
         score+=1;syncPhysicalDifficultyToScore();sfxPass();
-        if(score>best){best=score;localStorage.setItem(STORAGE.best,String(best))}checkUnlocks()
+        if(score>best){best=score;saveBest()}checkUnlocks()
       }else if(p.gold||p.isVerb){
         // Gold pipes always quiz. Every third non-gold pipe is a verb pipe.
         openQuiz(p);return;
       }else{
         // Ordinary pipes keep the flight flowing and are worth +1.
         score+=1;syncPhysicalDifficultyToScore();sfxPass();
-        if(score>best){best=score;localStorage.setItem(STORAGE.best,String(best))}
+        if(score>best){best=score;saveBest()}
         checkUnlocks();
       }
     }
@@ -1488,7 +1527,22 @@ document.getElementById("backBtn").addEventListener("click",()=>{
   customizeOverlay.style.display="none";showMainMenu();
 });
 
-bootstrapUnlocks();resetGame();showMainMenu();
+// Save again whenever the tab/app is backgrounded or closed.
+window.addEventListener("pagehide",saveBundle);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")saveBundle()});
+
+bootstrapUnlocks();
+resetGame();
+showMainMenu();
+
+// Downloaded file:// copies do not have reliable shared localStorage across filenames/paths.
+if(location.protocol==="file:"){
+  console.warn("Flappy Verb: progreso local no confiable en archivos descargados. Usa la URL HTTPS publicada para guardado estable.");
+}
+if(!storageOkay){
+  console.warn("Flappy Verb: este navegador o política escolar no permite localStorage persistente.");
+}
+
 requestAnimationFrame(loop);
 })();
 </script>
